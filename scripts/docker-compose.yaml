@@ -1,0 +1,53 @@
+name: posgressql
+services:
+  db:
+    image: postgres:16.2
+    restart: always
+    environment:
+      POSTGRES_DB: SalesDB
+      POSTGRES_PASSWORD: pgExample
+    volumes:
+      - C:\postgresql\data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "5432:5432"
+  pgadmin:
+    depends_on:
+      - db
+    image: dpage/pgadmin4:8.3
+    restart: always
+    volumes:
+    - C:\postgresql\pgadmin:/var/lib/pgadmin
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://localhost:80/misc/ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    ports:
+      - "5050:80"
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@domain.com
+      PGADMIN_DEFAULT_PASSWORD: pgAdmin
+  webapi:
+    depends_on:
+      - db
+    image: dotnet-sales-webapi/dev:latest
+    restart: always
+    ports:
+      - "5027:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__SalesDb: "Host=posgressql-db-1;Port=5432;Username=postgres;Password=pgExample;Database=SalesDB"
+  web:
+    depends_on:
+      - webapi
+    image: dotnet-sales-web/dev:latest
+    restart: always
+    ports:
+      - "4200:4000"
